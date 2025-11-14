@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 
+// Configuração do calendário em pt-BR
 LocaleConfig.locales["pt-br"] = {
   monthNames: [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -29,26 +30,30 @@ LocaleConfig.locales["pt-br"] = {
 };
 LocaleConfig.defaultLocale = "pt-br";
 
+// Função utilitária para extrair apenas a data YYYY-MM-DD
+function extractDateOnly(dateStr: string) {
+  return dateStr.slice(0, 10); // ignora hora e fuso horário
+}
+
 const CalendarEventsScreen = () => {
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
   const { theme } = useTheme();
 
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [year, setYear] = useState(today.getFullYear());
-  const [selected, setSelected] = useState(todayStr); // ⬅️ já começa com o dia atual selecionado
+  const [selected, setSelected] = useState(todayStr);
 
   const { spacesWithEvents, loading } = useEventsWithOccurrences(month, year);
+
+  // Mapeia todos os eventos
   const allEvents = spacesWithEvents.flatMap((s) =>
     (s.occurrences || []).map((occ) => {
       const startDate = occ.starts?.date || occ.starts_at || null;
-
-      const dateStr = startDate
-        ? new Date(startDate).toISOString().split("T")[0]
-        : null;
+      const dateStr = startDate ? extractDateOnly(startDate) : null;
 
       return {
-        key: `${occ.occurrence_id}-${occ.event?.id || Math.random()}`, // chave única
+        key: `${occ.occurrence_id}-${occ.event?.id || Math.random()}`,
         id: occ.event?.id || occ.occurrence_id,
         name: occ.event?.name || "Evento sem nome",
         starts_at: dateStr,
@@ -58,7 +63,10 @@ const CalendarEventsScreen = () => {
     })
   );
 
-  const filteredEvents = allEvents;
+  // Filtra eventos do dia selecionado
+  const visibleEvents = allEvents.filter((e) => e.starts_at === selected);
+
+  // Marca datas no calendário
   const markedDates = allEvents.reduce((acc, e) => {
     if (e.starts_at) {
       acc[e.starts_at] = { marked: true, dotColor: "#9C4BED" };
@@ -66,15 +74,12 @@ const CalendarEventsScreen = () => {
     return acc;
   }, {} as Record<string, any>);
 
+  // Marca o dia selecionado
   markedDates[selected] = {
     ...(markedDates[selected] || {}),
     selected: true,
     selectedColor: "#9C4BED",
   };
-
-  const visibleEvents = filteredEvents.filter(
-    (e) => e.starts_at === selected
-  );
 
   return (
     <View style={[styles.container, { backgroundColor: Colors[theme].background }]}>
@@ -115,10 +120,7 @@ const CalendarEventsScreen = () => {
                 <Text style={[styles.eventText, {color: Colors[theme].text}]}>
                   {item.name || "Sem nome"}{" "}
                   {item.starts_at
-                    ? `– ${new Date(item.starts_at).toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}`
+                    ? `– ${item.starts_at.slice(8,10)}/${item.starts_at.slice(5,7)}`
                     : "– sem data"}{" "}
                   <Text style={{ color: "#aaa" }}>({item.spaceName})</Text>
                   <Text style={{ color: "#aaa" }}> - {item.endereco}</Text>
@@ -146,7 +148,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000"
   },
-  
   eventsContainer: {
     flex: 1,
     paddingHorizontal: 15,

@@ -376,7 +376,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(16),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 0
+    gap: 0,
+    marginBottom: verticalScale(10)
   },
 
   filterButton: {
