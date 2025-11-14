@@ -1,101 +1,93 @@
 import { findAll } from "@/services/requests/findAll";
 import { filterByRadius } from "@/utils/filterByRadius";
 import * as Location from "expo-location";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import MapView, { Marker, Polyline, UrlTile } from "react-native-maps";
+import { WebView } from "react-native-webview";
 
 export default function EventMapScreen() {
-  const [region, setRegion] = useState<any>(null);
-  const [spaces, setSpaces] = useState<any[]>([]);
-  const [selectedSpace, setSelectedSpace] = useState<any>(null);
-  const [routeCoords, setRouteCoords] = useState<any[]>([]);
+  const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const mapRef = useRef<MapView>(null);
-
-  const RADIUS_KM = 100;
-  const OPENROUTE_API_KEY =
-    "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjM2I4NjkxYmM3ZTRmZDhiNGNhNTA3N2I0OGQ1MzJmIiwiaCI6Im11cm11cjY0In0=";
 
   useEffect(() => {
-    let subscriber: Location.LocationSubscription;
-    let mounted = true;
-
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (!mounted) return;
         if (status !== "granted") {
           alert("Permissão de localização negada.");
-          if (mounted) setLoading(false);
+          setLoading(false);
           return;
         }
 
         const { coords } = await Location.getCurrentPositionAsync({});
-        if (!mounted) return;
+        const latitude = coords.latitude;
+        const longitude = coords.longitude;
 
-        setRegion({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        });
+        // Pega todos os museus próximos
+        const data = await findAll();
+        const nearbySpaces = filterByRadius(latitude, longitude, data, 100);
 
-        try {
-          const data = await findAll();
-          const nearbySpaces = filterByRadius(coords.latitude, coords.longitude, data, RADIUS_KM);
-          if (mounted) setSpaces(nearbySpaces);
-        } catch (err) {
-          console.error("Erro findAll/filterByRadius:", err);
-        }
+        // Constrói array JS para passar pro Leaflet
+        const spacesJS = nearbySpaces
+          .map(
+            (s) =>
+              `{ id: ${s.id}, name: "${s.name}", lat: ${parseFloat(
+                s.location.latitude
+              )}, lon: ${parseFloat(s.location.longitude)} }`
+          )
+          .join(",");
 
-        subscriber = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, distanceInterval: 5 },
-          (loc) => {
-            if (mounted) {
-              setRegion((prev) => ({
-                ...prev,
-                latitude: loc.coords.latitude,
-                longitude: loc.coords.longitude,
-              }));
-            }
-          }
-        );
+        // HTML do Leaflet
+        const html = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+            <style>
+              html, body, #map { height: 100%; margin: 0; padding: 0; }
+            </style>
+          </head>
+          <body>
+            <div id="map"></div>
+            <script>
+              const map = L.map('map').setView([${latitude}, ${longitude}], 13);
+
+              // OpenStreetMap Tiles
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+              }).addTo(map);
+
+              // Marcador do usuário
+              L.marker([${latitude}, ${longitude}], {
+                radius: 10,
+                color: "#9C4BED",
+                fillColor: "#9C4BED",
+                fillOpacity: 1
+              }).addTo(map).bindPopup("Você está aqui").openPopup();
+
+              // Marcadores de museus
+              const spaces = [${spacesJS}];
+              spaces.forEach(space => {
+                L.marker([space.lat, space.lon], { title: space.name }).addTo(map)
+                  .bindPopup(space.name);
+              });
+            </script>
+          </body>
+          </html>
+        `;
+
+        setHtmlContent(html);
       } catch (err) {
-        console.error("Erro no useEffect principal:", err);
+        console.error("Erro ao gerar mapa:", err);
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-
-    return () => {
-      mounted = false;
-      subscriber?.remove();
-    };
   }, []);
 
-  // Atualiza rota quando o usuário ou espaço selecionado muda
-  useEffect(() => {
-    const fetchRoute = async () => {
-      if (!selectedSpace || !region) return;
-      try {
-        const response = await fetch(
-          `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${OPENROUTE_API_KEY}&start=${region.longitude},${region.latitude}&end=${selectedSpace.lon},${selectedSpace.lat}`
-        );
-        const data = await response.json();
-        const coords = data.features[0].geometry.coordinates.map(([lon, lat]: [number, number]) => ({
-          latitude: lat,
-          longitude: lon,
-        }));
-        setRouteCoords(coords);
-      } catch (err) {
-        console.error("Erro ao buscar rota:", err);
-      }
-    };
-    fetchRoute();
-  }, [selectedSpace, region]);
-
-  if (!region || loading) {
+  if (loading || !htmlContent) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#9C4BED" />
@@ -104,61 +96,14 @@ export default function EventMapScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={{
-          latitude: region.latitude,
-          longitude: region.longitude,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        }}
-        onPress={() => {
-          setSelectedSpace(null);
-          setRouteCoords([]);
-        }}
-      >
-        {/* OpenStreetMap como fundo */}
-        <UrlTile
-          urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-          flipY={false}
-        />
-
-        {/* Usuário */}
-        <Marker coordinate={{ latitude: region.latitude, longitude: region.longitude }} pinColor="#9C4BED" title="Você está aqui" />
-
-        {/* Spaces */}
-        {spaces.map((space) => {
-          if (!space.location?.latitude || !space.location?.longitude) return null;
-          const lat = parseFloat(space.location.latitude);
-          const lon = parseFloat(space.location.longitude);
-
-          return (
-            <Marker
-                title={ space.name || 'Sem nome'}
-                key={space.id}
-                coordinate={{ latitude: lat, longitude: lon }}
-                pinColor="#FF6347"
-                onPress={() => setSelectedSpace({ lat, lon })}
-          />
-          );
-        })}
-
-        {/* Rota */}
-        {routeCoords.length > 0 && <Polyline coordinates={routeCoords} strokeColor="#9C4BED" strokeWidth={4} />}
-      </MapView>
-    </View>
+    <WebView
+      originWhitelist={["*"]}
+      source={{ html: htmlContent }}
+      style={{ flex: 1 }}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" },
-  callout: { width: 200, padding: 5, minHeight: 50 },
-  spaceName: { fontWeight: "bold", fontSize: 16 },
-  spaceLink: { fontSize: 14, color: "#1E90FF", marginTop: 4, textDecorationLine: "underline" },
-  clickInfo: { fontSize: 12, marginTop: 6, color: "#666" },
 });

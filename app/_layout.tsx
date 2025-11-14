@@ -5,6 +5,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -30,6 +32,7 @@ export default function RootLayout() {
   }
 
   return (
+    <SafeAreaProvider>
     <ThemeProvider>
       <Stack initialRouteName={initialRoute}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -44,5 +47,6 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

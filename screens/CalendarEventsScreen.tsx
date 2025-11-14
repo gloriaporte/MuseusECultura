@@ -53,6 +53,7 @@ const CalendarEventsScreen = () => {
         name: occ.event?.name || "Evento sem nome",
         starts_at: dateStr,
         spaceName: s.name,
+        endereco: s.endereco
       };
     })
   );
@@ -120,6 +121,7 @@ const CalendarEventsScreen = () => {
                       })}`
                     : "– sem data"}{" "}
                   <Text style={{ color: "#aaa" }}>({item.spaceName})</Text>
+                  <Text style={{ color: "#aaa" }}> - {item.endereco}</Text>
                 </Text>
               </View>
             )}

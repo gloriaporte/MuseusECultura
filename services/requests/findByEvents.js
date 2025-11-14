@@ -10,7 +10,7 @@ export const findByEvents = async (month, year) => {
     const to = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
     const response = await api.get(
-      `space/findByEvents?%40from=${from}&%40to=${to}&%40seals=&%40select=id%2Ctype%2Cname%2Clocation%2CsingleUrl&location=%21EQ%28%5B0%2C0%5D%29`
+      `space/findByEvents?%40from=${from}&%40to=${to}&%40seals=&%40select=id%2Ctype%2Cname%2Clocation%2Cendereco%2CsingleUrl&location=%21EQ%28%5B0%2C0%5D%29`
     );
 
     return { tipo: "sucesso", data: response.data };
