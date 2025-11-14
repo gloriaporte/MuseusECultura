@@ -50,7 +50,7 @@ export default function OnboardingScreen({ navigation }: any) {
 
   const handleStart = async () => {
     await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-    router.replace('(tabs)');
+    router.replace('(tabs)/museumlist');
   };
 
   useEffect(() => {
