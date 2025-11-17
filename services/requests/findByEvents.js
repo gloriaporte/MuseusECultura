@@ -6,7 +6,7 @@ import api from "../api";
 export const findByEvents = async (month, year) => {
   try {
     const from = `${year}-${String(month).padStart(2, "0")}-01`;
-    const lastDay = new Date(year, month, 0).getDate(); // <-- magia aqui 😄
+    const lastDay = new Date(year, month, 0).getDate();
     const to = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
     const response = await api.get(

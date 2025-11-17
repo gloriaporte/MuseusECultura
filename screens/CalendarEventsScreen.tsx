@@ -58,13 +58,16 @@ const CalendarEventsScreen = () => {
         name: occ.event?.name || "Evento sem nome",
         starts_at: dateStr,
         spaceName: s.name,
-        endereco: s.endereco
+        endereco: s.endereco,
+        price: s.price,
+        princeInfo: s.priceInfo
       };
     })
   );
 
   // Filtra eventos do dia selecionado
   const visibleEvents = allEvents.filter((e) => e.starts_at === selected);
+  console.log(visibleEvents)
 
   // Marca datas no calendário
   const markedDates = allEvents.reduce((acc, e) => {
@@ -112,29 +115,47 @@ const CalendarEventsScreen = () => {
           <ActivityIndicator size="large" color="#9C4BED" />
         ) : (
           <FlatList
-            data={visibleEvents}
-            keyExtractor={(item) => item.key}
-            renderItem={({ item }) => (
-              <View style={styles.eventItem}>
-                <View style={styles.eventDot} />
-                <Text style={[styles.eventText, {color: Colors[theme].text}]}>
-                  {item.name || "Sem nome"}{" "}
-                  {item.starts_at
-                    ? `– ${item.starts_at.slice(8,10)}/${item.starts_at.slice(5,7)}`
-                    : "– sem data"}{" "}
-                  <Text style={{ color: "#aaa" }}>({item.spaceName})</Text>
-                  <Text style={{ color: "#aaa" }}> - {item.endereco}</Text>
-                </Text>
-              </View>
+  data={visibleEvents}
+  keyExtractor={(item) => item.key}
+  renderItem={({ item }) => (
+    <View style={styles.eventItem}>
+      <View style={styles.eventDot} />
+
+      <View style={{ flex: 1 }}>
+        {/* Linha principal */}
+        <Text style={[styles.eventText, { color: Colors[theme].text }]}>
+          {item.name || "Sem nome"}{" "}
+          {item.starts_at
+            ? `– ${item.starts_at.slice(8,10)}/${item.starts_at.slice(5,7)}`
+            : "– sem data"}{" "}
+          <Text style={{ color: "#aaa" }}>({item.spaceName})</Text>
+          <Text style={{ color: "#aaa" }}> - {item.endereco}</Text>
+        </Text>
+
+        {/* Preço, se existir */}
+        {(item.price || item.priceInfo) && (
+          <Text style={[styles.eventText, { color: Colors[theme].text, marginTop: 2 }]}>
+            {item.price && (
+              <Text style={{ fontWeight: "600" }}>{item.price}</Text>
             )}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>
-                Nenhum evento encontrado para este dia.
-              </Text>
-            }
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 80 }}
-          />
+            
+            {item.price && item.priceInfo && " – "}
+            
+            {item.priceInfo && (
+              <Text style={{ color: "#aaa" }}>{item.priceInfo}</Text>
+            )}
+          </Text>
+        )}
+      </View>
+    </View>
+  )}
+  ListEmptyComponent={
+    <Text style={styles.emptyText}>Nenhum evento encontrado para este dia.</Text>
+  }
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={{ paddingBottom: 80 }}
+/>
+
         )}
       </View>
     </View>

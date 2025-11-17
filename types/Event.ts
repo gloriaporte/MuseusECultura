@@ -6,6 +6,8 @@ export interface EventType {
       latitude: string;
       longitude: string;
     };
+    price: string;
+    princeInfo: string;
     type?: {
       id: number;
       name: string;

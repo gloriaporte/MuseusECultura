@@ -1,7 +1,7 @@
 import Colors from '@/constants/Colors';
 import { useTheme } from '@/contexts/ThemeContext';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
-
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -211,9 +211,27 @@ const MuseumListScreen = () => {
           placeholder="Pesquisar"
           placeholderTextColor="#999"
           value={query}
-          onChangeText={setQuery}
+          onChangeText={(text) => {
+            setQuery(text);
+            if (selectedTag !== 'all') {
+              setSelectedTag('all');
+            }
+          }}
+          onSubmitEditing={() => applyFilters()}
+          returnKeyType="search"
           style={[styles.searchInput, { backgroundColor: Colors[theme].backgroundCard, borderColor: Colors[theme].tertiaryDark, color: Colors[theme].tertiaryDark }]}
         />
+         <TouchableOpacity
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            backgroundColor: Colors[theme].tertiaryDark,
+            borderRadius: 10,
+          }}
+          onPress={applyFilters}
+        >
+          <FontAwesome name="search" size={24} color="#FFF" />        
+          </TouchableOpacity>
       </View>
 
       {/* Filtros de Cidade-Estado-Todos */}
